@@ -20,12 +20,13 @@ interface Toast {
 export default function App() {
   const [collapsed, setCollapsed] = useState(false);
   const [query, setQuery] = useState('');
+  const [submittedQuery, setSubmittedQuery] = useState('');
   const [listView, setListView] = useState<ListView>({ name: 'library' });
   const [returnView, setReturnView] = useState<ListView>({ name: 'library' });
   const [savingTitle, setSavingTitle] = useState<string | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
 
-  const searching = query.trim().length >= 2;
+  const searching = submittedQuery.trim().length >= 2;
 
   useEffect(() => {
     if (!toast || toast.kind === 'error') return;
@@ -35,13 +36,22 @@ export default function App() {
 
   function navigateToList(view: ListView) {
     setQuery('');
+    setSubmittedQuery('');
     setListView(view);
     setReturnView(view);
+  }
+
+  function handleSubmitSearch() {
+    const trimmed = query.trim();
+    if (trimmed.length >= 2) {
+      setSubmittedQuery(trimmed);
+    }
   }
 
   function openDetail(mediaId: number) {
     if (listView.name === 'library') setReturnView(listView);
     setQuery('');
+    setSubmittedQuery('');
     setListView({ name: 'detail', mediaId });
   }
 
@@ -71,6 +81,7 @@ export default function App() {
         }
         onToggleCollapse={() => setCollapsed((value) => !value)}
         onQueryChange={setQuery}
+        onSubmit={handleSubmitSearch}
         onNavigate={(key) =>
           navigateToList(
             key === 'all'
@@ -82,7 +93,7 @@ export default function App() {
 
       <main className="main">
         {searching ? (
-          <SearchPage query={query} savingTitle={savingTitle} onSelect={handleSelectResult} />
+          <SearchPage query={submittedQuery} savingTitle={savingTitle} onSelect={handleSelectResult} />
         ) : listView.name === 'detail' ? (
           <DetailPage
             key={listView.mediaId}

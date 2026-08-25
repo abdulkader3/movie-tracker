@@ -8,7 +8,7 @@ import { imageUrl } from '../services/api/tmdb';
 import { refreshMedia } from '../services/database/importer';
 import { attachFile, removeFile } from '../services/database/fileRepo';
 import { deleteMedia } from '../services/database/mediaRepo';
-import { setEpisodeWatched, setStatus } from '../services/database/progressRepo';
+import { setEpisodeWatched, setSeasonWatched, setStatus } from '../services/database/progressRepo';
 import { playFile } from '../services/player/playerService';
 import type { EpisodeRecord, ProgressStatus } from '../types/media';
 import { pickVideoFile } from '../utils/dialog';
@@ -137,6 +137,7 @@ export function DetailPage({ mediaId, onBack, onDeleted }: DetailPageProps) {
 
   const backdropUrl = imageUrl(media.backdrop_path, 'w780');
   const posterUrl = imageUrl(media.poster_path, 'w500');
+  const seasonCardBackground = posterUrl ?? imageUrl(media.backdrop_path, 'w500');
   const year = yearOf(media.release_date);
 
   const metaBits: string[] = [];
@@ -319,9 +320,13 @@ export function DetailPage({ mediaId, onBack, onDeleted }: DetailPageProps) {
         <EpisodeList
           seasons={seasons}
           episodes={episodes}
+          backgroundUrl={seasonCardBackground}
           disabled={busy}
           onToggleWatched={(episode, watched) =>
             void runAction(() => setEpisodeWatched(media.id, episode.id, watched))
+          }
+          onSetSeasonWatched={(seasonNumber, watched) =>
+            void runAction(() => setSeasonWatched(media.id, seasonNumber, watched))
           }
           onPickFile={(episode) => void chooseEpisodeFile(episode)}
           onPlay={playEpisode}

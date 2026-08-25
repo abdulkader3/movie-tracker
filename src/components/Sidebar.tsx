@@ -6,6 +6,7 @@ interface SidebarProps {
   activeKey: 'all' | 'movie' | 'tv' | null;
   onToggleCollapse(): void;
   onQueryChange(query: string): void;
+  onSubmit(): void;
   onNavigate(key: 'all' | 'movie' | 'tv'): void;
 }
 
@@ -50,6 +51,7 @@ export function Sidebar({
   activeKey,
   onToggleCollapse,
   onQueryChange,
+  onSubmit,
   onNavigate,
 }: SidebarProps) {
   return (
@@ -76,8 +78,25 @@ export function Sidebar({
           placeholder="Search TMDB…"
           value={query}
           onChange={(event) => onQueryChange(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              onSubmit();
+            }
+          }}
           spellCheck={false}
         />
+        <button
+          type="button"
+          className="search-btn"
+          onClick={onSubmit}
+          title="Search"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+        </button>
       </div>
 
       <nav className="sidebar-nav">

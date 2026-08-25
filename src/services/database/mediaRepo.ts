@@ -1,5 +1,14 @@
 import { getDb } from './db';
-import type { Genre, MediaListItem, MediaRecord, MediaType, ProgressStatus } from '../../types/media';
+import type {
+  Genre,
+  MediaListItem,
+  MediaRecord,
+  MediaType,
+  ProgressStatus,
+  TvEpisodeRef,
+  TvSeasonSummary,
+  TvSummary,
+} from '../../types/media';
 
 export interface MediaInput {
   tmdb_id: number;
@@ -35,11 +44,43 @@ interface LibraryRow {
   status: string | null;
 }
 
+const AIRED_FILTER = `air_date IS NOT NULL AND air_date <= date('now')`;
+
 const LIBRARY_SELECT = `
   SELECT m.id, m.tmdb_id, m.media_type, m.title, m.original_title, m.poster_path, m.backdrop_path,
-         m.release_date, m.imdb_rating, m.tmdb_rating, p.status AS status
+         m.release_date, m.imdb_rating, m.tmdb_rating, p.status AS status,
+         MAX(IFNULL(eps.last_episode_activity, ''), IFNULL(p.updated_at, '')) AS last_activity
   FROM media m
-  LEFT JOIN user_progress p ON p.media_id = m.id AND p.episode_id IS NULL`;
+  LEFT JOIN user_progress p ON p.media_id = m.id AND p.episode_id IS NULL
+  LEFT JOIN (
+    SELECT e.media_id AS media_id,
+           COUNT(*) AS aired_eps,
+           SUM(CASE WHEN pr.episode_id IS NOT NULL THEN 1 ELSE 0 END) AS watched_eps,
+           MAX(pr.updated_at) AS last_episode_activity
+    FROM episodes e
+    LEFT JOIN user_progress pr ON pr.episode_id = e.id
+    WHERE e.${AIRED_FILTER}
+    GROUP BY e.media_id
+  ) eps ON eps.media_id = m.id`;
+
+const LIBRARY_ORDER = `
+  ORDER BY CASE
+    WHEN m.media_type = 'movie' THEN
+      CASE IFNULL(p.status, '')
+        WHEN 'watching' THEN 0
+        WHEN 'watched' THEN 2
+        ELSE 1
+      END
+    ELSE
+      CASE
+        WHEN IFNULL(eps.aired_eps, 0) > 0 AND IFNULL(eps.watched_eps, 0) >= eps.aired_eps THEN 2
+        WHEN IFNULL(eps.watched_eps, 0) > 0 OR IFNULL(p.status, '') = 'watching' THEN 0
+        WHEN p.status = 'watched' THEN 2
+        ELSE 1
+      END
+  END ASC,
+  last_activity DESC,
+  m.title COLLATE NOCASE ASC`;
 
 function toListItem(row: LibraryRow): MediaListItem {
   return {
@@ -143,6 +184,82 @@ export async function getAllProviderKeys(): Promise<ReadonlySet<string>> {
   return new Set(rows.map((row) => `${row.media_type}:${row.tmdb_id}`));
 }
 
+async function attachTvSummaries(items: MediaListItem[]): Promise<void> {
+  const tvIds = items.filter((item) => item.media_type === 'tv').map((item) => item.id);
+  if (!tvIds.length) return;
+  const placeholders = tvIds.map(() => '?').join(', ');
+
+  const db = await getDb();
+  const seasonRows = await db.select<(TvSeasonSummary & { media_id: number })[]>(
+    `SELECT e.media_id, e.season_number,
+            COUNT(*) AS total,
+            SUM(CASE WHEN p.episode_id IS NOT NULL THEN 1 ELSE 0 END) AS watched
+     FROM episodes e
+     LEFT JOIN user_progress p ON p.episode_id = e.id
+     WHERE e.media_id IN (${placeholders}) AND e.${AIRED_FILTER}
+     GROUP BY e.media_id, e.season_number
+     ORDER BY e.media_id ASC, e.season_number ASC`,
+    tvIds,
+  );
+  const nextRows = await db.select<(TvEpisodeRef & { media_id: number })[]>(
+    `SELECT e.media_id, e.season_number, e.episode_number, e.name
+     FROM episodes e
+     LEFT JOIN user_progress p ON p.episode_id = e.id
+     WHERE e.media_id IN (${placeholders}) AND p.episode_id IS NULL AND e.${AIRED_FILTER}
+     ORDER BY e.media_id ASC, e.season_number ASC, e.episode_number ASC`,
+    tvIds,
+  );
+  const lastRows = await db.select<(TvEpisodeRef & { media_id: number })[]>(
+    `SELECT e.media_id, e.season_number, e.episode_number, e.name
+     FROM user_progress p
+     JOIN episodes e ON e.id = p.episode_id
+     WHERE e.media_id IN (${placeholders}) AND p.status = 'watched'
+     ORDER BY p.updated_at DESC, e.season_number DESC, e.episode_number DESC`,
+    tvIds,
+  );
+
+  const summaries = new Map<number, TvSummary>();
+  const ensure = (mediaId: number): TvSummary => {
+    let summary = summaries.get(mediaId);
+    if (!summary) {
+      summary = { seasons: [], next_episode: null, last_watched: null };
+      summaries.set(mediaId, summary);
+    }
+    return summary;
+  };
+  for (const row of seasonRows) {
+    ensure(row.media_id).seasons.push({
+      season_number: row.season_number,
+      total: row.total,
+      watched: row.watched,
+    });
+  }
+  for (const row of nextRows) {
+    const summary = ensure(row.media_id);
+    if (!summary.next_episode) {
+      summary.next_episode = {
+        season_number: row.season_number,
+        episode_number: row.episode_number,
+        name: row.name,
+      };
+    }
+  }
+  for (const row of lastRows) {
+    const summary = ensure(row.media_id);
+    if (!summary.last_watched) {
+      summary.last_watched = {
+        season_number: row.season_number,
+        episode_number: row.episode_number,
+        name: row.name,
+      };
+    }
+  }
+  for (const item of items) {
+    const summary = summaries.get(item.id);
+    if (summary) item.tv_summary = summary;
+  }
+}
+
 export async function getLibrary(
   filter: { mediaType?: MediaType; search?: string } = {},
 ): Promise<MediaListItem[]> {
@@ -158,11 +275,10 @@ export async function getLibrary(
     params.push(`%${filter.search}%`, `%${filter.search}%`);
   }
   const whereSql = clauses.length ? ` WHERE ${clauses.join(' AND ')}` : '';
-  const rows = await db.select<LibraryRow[]>(
-    `${LIBRARY_SELECT}${whereSql} ORDER BY m.created_at DESC, m.title COLLATE NOCASE ASC`,
-    params,
-  );
-  return rows.map(toListItem);
+  const rows = await db.select<LibraryRow[]>(`${LIBRARY_SELECT}${whereSql} ${LIBRARY_ORDER}`, params);
+  const items = rows.map(toListItem);
+  await attachTvSummaries(items);
+  return items;
 }
 
 interface MediaRow extends Omit<MediaRecord, 'genres' | 'media_type'> {

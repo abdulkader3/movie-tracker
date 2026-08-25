@@ -7,6 +7,24 @@ export interface Genre {
   name: string;
 }
 
+export interface TvSeasonSummary {
+  season_number: number;
+  total: number;
+  watched: number;
+}
+
+export interface TvEpisodeRef {
+  season_number: number;
+  episode_number: number;
+  name: string | null;
+}
+
+export interface TvSummary {
+  seasons: TvSeasonSummary[];
+  next_episode: TvEpisodeRef | null;
+  last_watched: TvEpisodeRef | null;
+}
+
 export interface MediaListItem {
   id: number;
   tmdb_id: number;
@@ -19,6 +37,7 @@ export interface MediaListItem {
   imdb_rating: number | null;
   tmdb_rating: number | null;
   status: ProgressStatus | null;
+  tv_summary?: TvSummary;
 }
 
 export interface MediaRecord extends MediaListItem {

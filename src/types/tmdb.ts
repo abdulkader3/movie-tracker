@@ -78,3 +78,18 @@ export interface OmdbRatingResponse {
   Response?: 'True' | 'False';
   imdbRating?: string;
 }
+
+export interface OmdbSearchItem {
+  imdbID: string;
+  Title: string;
+  Year: string;
+  Type: string;
+  Poster: string;
+}
+
+export interface OmdbSearchResponse {
+  Response?: 'True' | 'False';
+  Search?: OmdbSearchItem[];
+  totalResults?: string;
+  Error?: string;
+}
