@@ -201,7 +201,7 @@ button {
 
 .main {
   flex: 1;
-  overflow-y: auto;
+  overflow-y: hidden;
   padding: 26px 34px 40px;
 }
 
@@ -244,13 +244,22 @@ button {
   margin-top: 15px;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
+  .card-grid--three {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 39px;
+   padding: 20px 10px;
+   margin-top: 15px;
+  }
+}
+
+@media (max-width: 700px) {
   .card-grid--three {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
-@media (max-width: 560px) {
+@media (max-width: 480px) {
   .card-grid--three {
     grid-template-columns: 1fr;
   }
@@ -749,11 +758,11 @@ button {
 }
 
 .season-card.complete {
-  border-color: rgba(52, 211, 153, 0.65);
+  border-color: rgba(52, 211, 153, 0.22);
 }
 
 .season-card.complete:hover {
-  border-color: var(--ok);
+  border-color: rgba(52, 211, 153, 0.4);
 }
 
 .season-card-bg {
@@ -804,23 +813,22 @@ button {
 
 .season-card-progress.done,
 .season-panel-progress.done {
-  color: var(--ok);
+  color: rgba(52, 211, 153, 0.6);
 }
 
 .season-card-check {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 22px;
-  height: 22px;
+  top: 7px;
+  right: 7px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--ok);
-  border: 1px solid rgba(52, 211, 153, 0.7);
-  background: rgba(52, 211, 153, 0.14);
-  box-shadow: 0 0 12px rgba(52, 211, 153, 0.4);
+  color: rgba(52, 211, 153, 0.65);
+  border: 1px solid rgba(52, 211, 153, 0.18);
+  background: rgba(52, 211, 153, 0.06);
 }
 
 .episodes h2 + .season-grid {
@@ -974,6 +982,7 @@ button {
 
 .detail-foot {
   margin-top: 30px;
+  padding-bottom: 80px;
   color: var(--text-dim);
   font-size: 12px;
 }

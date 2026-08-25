@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { DetailPage } from './pages/DetailPage';
 import { LibraryPage } from './pages/LibraryPage';
@@ -17,6 +17,50 @@ interface Toast {
   text: string;
 }
 
+function useSmoothScroll() {
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    let raf = 0;
+    let vel = 0;
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const dy = Math.abs(e.deltaY) > 1 ? e.deltaY : e.deltaY * 2;
+      vel += dy * 0.22;
+      if (!raf) tick();
+    };
+
+    const onMove = () => {
+      vel *= 0.25;
+    };
+
+    function tick() {
+      raf = 0;
+      if (Math.abs(vel) < 0.4) {
+        vel = 0;
+        return;
+      }
+      el!.scrollTop += vel;
+      vel *= 0.92;
+      raf = requestAnimationFrame(tick);
+    }
+
+    el.addEventListener('wheel', onWheel, { passive: false });
+    el.addEventListener('mousemove', onMove);
+    return () => {
+      el.removeEventListener('wheel', onWheel);
+      el.removeEventListener('mousemove', onMove);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, []);
+
+  return ref;
+}
+
 export default function App() {
   const [collapsed, setCollapsed] = useState(false);
   const [query, setQuery] = useState('');
@@ -25,6 +69,7 @@ export default function App() {
   const [returnView, setReturnView] = useState<ListView>({ name: 'library' });
   const [savingTitle, setSavingTitle] = useState<string | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
+  const mainRef = useSmoothScroll();
 
   const searching = submittedQuery.trim().length >= 2;
 
@@ -91,7 +136,7 @@ export default function App() {
         }
       />
 
-      <main className="main">
+      <main className="main" ref={mainRef}>
         {searching ? (
           <SearchPage query={submittedQuery} savingTitle={savingTitle} onSelect={handleSelectResult} />
         ) : listView.name === 'detail' ? (

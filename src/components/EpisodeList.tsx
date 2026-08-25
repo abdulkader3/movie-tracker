@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { EpisodeRecord, SeasonRecord } from '../types/media';
 import { fileName, formatDate, formatRuntime, pad2 } from '../utils/format';
 
@@ -25,7 +25,7 @@ interface SeasonGroup {
 
 function CheckIcon() {
   return (
-    <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+    <svg viewBox="0 0 16 16" width="10" height="10" aria-hidden="true">
       <path
         d="M3 8.5L6.5 12L13 4.5"
         fill="none"
@@ -79,6 +79,13 @@ export function EpisodeList({
         };
       });
   }, [seasons, episodes]);
+
+  useEffect(() => {
+    const firstIncomplete = groups.find((group) => !group.complete);
+    if (firstIncomplete) {
+      setExpandedSeason(firstIncomplete.number);
+    }
+  }, [groups]);
 
   if (!groups.length) {
     return (
