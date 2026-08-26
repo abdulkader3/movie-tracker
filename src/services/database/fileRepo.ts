@@ -40,3 +40,11 @@ export async function removeFile(fileId: number): Promise<void> {
   const db = await getDb();
   await db.execute('DELETE FROM local_files WHERE id = ?', [fileId]);
 }
+
+export async function removeFilesForSeason(mediaId: number, seasonNumber: number): Promise<void> {
+  const db = await getDb();
+  await db.execute(
+    'DELETE FROM local_files WHERE episode_id IN (SELECT id FROM episodes WHERE media_id = ? AND season_number = ?)',
+    [mediaId, seasonNumber],
+  );
+}

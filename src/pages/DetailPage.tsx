@@ -6,7 +6,7 @@ import { Spinner } from '../components/Spinner';
 import { useMediaDetail } from '../hooks/useMediaDetail';
 import { imageUrl } from '../services/api/tmdb';
 import { refreshMedia } from '../services/database/importer';
-import { attachFile, removeFile } from '../services/database/fileRepo';
+import { attachFile, removeFile, removeFilesForSeason } from '../services/database/fileRepo';
 import { deleteMedia } from '../services/database/mediaRepo';
 import { setEpisodeWatched, setSeasonWatched, setStatus } from '../services/database/progressRepo';
 import { playFile } from '../services/player/playerService';
@@ -107,6 +107,13 @@ export function DetailPage({ mediaId, onBack, onDeleted }: DetailPageProps) {
     await runAction(() => attachFile({ episodeId: episode.id }, path));
   }
 
+  function removeSeasonFiles(seasonNumber: number) {
+    void runAction(
+      () => removeFilesForSeason(media.id, seasonNumber),
+      'Local file associations removed for this season.',
+    );
+  }
+
   function playMovie() {
     if (!movieFile) return;
     playFile(movieFile.path).catch(() =>
@@ -116,9 +123,13 @@ export function DetailPage({ mediaId, onBack, onDeleted }: DetailPageProps) {
 
   function playEpisode(episode: EpisodeRecord) {
     if (!episode.file) return;
-    playFile(episode.file.path).catch(() =>
-      setNotice({ kind: 'error', text: `Could not open file: ${episode.file!.path}` }),
-    );
+    playFile(episode.file.path).catch(async () => {
+      setNotice({ kind: 'error', text: 'File not found. Please select the file again.' });
+      const path = await pickVideoFile();
+      if (path) {
+        await runAction(() => attachFile({ episodeId: episode.id }, path));
+      }
+    });
   }
 
   async function handleDelete() {
@@ -333,6 +344,7 @@ export function DetailPage({ mediaId, onBack, onDeleted }: DetailPageProps) {
           onRemoveFile={(episode) => {
             if (episode.file) void runAction(() => removeFile(episode.file!.id));
           }}
+          onRemoveSeasonFiles={removeSeasonFiles}
         />
       )}
 

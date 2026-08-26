@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { EpisodeRecord, SeasonRecord } from '../types/media';
 import { fileName, formatDate, formatRuntime, pad2 } from '../utils/format';
 
@@ -12,6 +12,7 @@ interface EpisodeListProps {
   onPickFile(episode: EpisodeRecord): void;
   onPlay(episode: EpisodeRecord): void;
   onRemoveFile(episode: EpisodeRecord): void;
+  onRemoveSeasonFiles(seasonNumber: number): void;
 }
 
 interface SeasonGroup {
@@ -38,6 +39,16 @@ function CheckIcon() {
   );
 }
 
+function DotsIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+      <circle cx="3" cy="8" r="1.3" fill="currentColor" />
+      <circle cx="8" cy="8" r="1.3" fill="currentColor" />
+      <circle cx="13" cy="8" r="1.3" fill="currentColor" />
+    </svg>
+  );
+}
+
 function seasonLabel(seasonNumber: number): string {
   return seasonNumber === 0 ? 'SP' : `S${seasonNumber}`;
 }
@@ -52,8 +63,11 @@ export function EpisodeList({
   onPickFile,
   onPlay,
   onRemoveFile,
+  onRemoveSeasonFiles,
 }: EpisodeListProps) {
   const [expandedSeason, setExpandedSeason] = useState<number | null>(null);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   const groups = useMemo<SeasonGroup[]>(() => {
     const bySeason = new Map<number, EpisodeRecord[]>();
@@ -87,11 +101,30 @@ export function EpisodeList({
     }
   }, [groups]);
 
+  useEffect(() => {
+    if (!openMenu) return;
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenu(null);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [openMenu]);
+
+  function toggleMenu(key: string) {
+    setOpenMenu((prev) => (prev === key ? null : key));
+  }
+
+  function closeMenu() {
+    setOpenMenu(null);
+  }
+
   if (!groups.length) {
     return (
       <section className="episodes">
         <h2>Episodes</h2>
-        <p className="empty-state">No episodes stored yet. Use “Refresh” to fetch them.</p>
+        <p className="empty-state">No episodes stored yet. Use "Refresh" to fetch them.</p>
       </section>
     );
   }
@@ -154,6 +187,29 @@ export function EpisodeList({
               {activeGroup.watchedCount}/{activeGroup.total} watched
             </span>
             <div className="season-panel-actions">
+              <div className="dot-menu" ref={openMenu === `season:${activeGroup.number}` ? menuRef : undefined}>
+                <button
+                  type="button"
+                  className="dot-menu-btn"
+                  disabled={disabled}
+                  title="Season file actions"
+                  onClick={(e) => { e.stopPropagation(); toggleMenu(`season:${activeGroup.number}`); }}
+                >
+                  <DotsIcon />
+                </button>
+                {openMenu === `season:${activeGroup.number}` && (
+                  <div className="dot-menu-dropdown">
+                    <button
+                      type="button"
+                      className="dot-menu-item danger"
+                      disabled={disabled}
+                      onClick={() => { closeMenu(); onRemoveSeasonFiles(activeGroup.number); }}
+                    >
+                      Remove all files for this season
+                    </button>
+                  </div>
+                )}
+              </div>
               <button
                 type="button"
                 className={`btn btn-small ${activeGroup.complete ? '' : 'btn-primary'}`}
@@ -221,23 +277,40 @@ export function EpisodeList({
                       >
                         Play
                       </button>
-                      <button
-                        type="button"
-                        className="btn btn-small"
-                        disabled={disabled}
-                        onClick={() => onPickFile(episode)}
+                      <div
+                        className="dot-menu"
+                        ref={openMenu === `ep:${episode.id}` ? menuRef : undefined}
                       >
-                        Replace
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-small btn-ghost"
-                        title="Remove file link"
-                        disabled={disabled}
-                        onClick={() => onRemoveFile(episode)}
-                      >
-                        ×
-                      </button>
+                        <button
+                          type="button"
+                          className="dot-menu-btn"
+                          disabled={disabled}
+                          title="File actions"
+                          onClick={(e) => { e.stopPropagation(); toggleMenu(`ep:${episode.id}`); }}
+                        >
+                          <DotsIcon />
+                        </button>
+                        {openMenu === `ep:${episode.id}` && (
+                          <div className="dot-menu-dropdown">
+                            <button
+                              type="button"
+                              className="dot-menu-item"
+                              disabled={disabled}
+                              onClick={() => { closeMenu(); onPickFile(episode); }}
+                            >
+                              Replace file
+                            </button>
+                            <button
+                              type="button"
+                              className="dot-menu-item danger"
+                              disabled={disabled}
+                              onClick={() => { closeMenu(); onRemoveFile(episode); }}
+                            >
+                              Remove file link
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </>
                   ) : (
                     <button

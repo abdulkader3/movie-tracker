@@ -980,6 +980,97 @@ button {
   padding-top: 3px;
 }
 
+/* Three-dot menu (episode and season level) */
+.dot-menu {
+  position: relative;
+}
+
+.dot-menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 24px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+  padding: 0;
+  line-height: 1;
+}
+
+.dot-menu-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.dot-menu-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.dot-menu-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 20;
+  min-width: 180px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elev);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.dot-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s ease;
+  white-space: nowrap;
+}
+
+.dot-menu-item:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.dot-menu-item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.dot-menu-item.danger {
+  color: var(--danger);
+}
+
+.dot-menu-item.danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* Season panel header dot-menu */
+.season-panel-head .dot-menu {
+  margin-left: 4px;
+}
+
+.season-panel-head .dot-menu-btn {
+  width: 26px;
+  height: 22px;
+  font-size: 13px;
+}
+
 .detail-foot {
   margin-top: 30px;
   padding-bottom: 80px;
