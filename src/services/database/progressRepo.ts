@@ -1,5 +1,6 @@
 import { getDb } from './db';
 import type { MediaProgress, ProgressStatus } from '../../types/media';
+import { markDatabaseDirty } from '../../hooks/useBackup';
 
 export async function getProgress(mediaId: number): Promise<MediaProgress | null> {
   const db = await getDb();
@@ -33,6 +34,7 @@ export async function setStatus(mediaId: number, status: ProgressStatus): Promis
   } else {
     await db.execute('INSERT INTO user_progress (media_id, status) VALUES (?, ?)', [mediaId, status]);
   }
+  markDatabaseDirty();
 }
 
 function deriveShowStatus(totalAired: number, watchedAired: number): ProgressStatus | null {
@@ -94,6 +96,7 @@ export async function setEpisodeWatched(
     }
   }
   await syncShowStatus(mediaId);
+  markDatabaseDirty();
 }
 
 export async function setSeasonWatched(
@@ -128,4 +131,5 @@ export async function setSeasonWatched(
     );
   }
   await syncShowStatus(mediaId);
+  markDatabaseDirty();
 }

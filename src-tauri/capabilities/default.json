@@ -12,6 +12,22 @@
     {
       "identifier": "opener:allow-open-path",
       "allow": [{ "path": "**" }]
+    },
+    "fs:default",
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        { "path": "$APPDATA/**" },
+        { "path": "$APPDATA/*" }
+      ]
+    },
+    "http:default",
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "https://**" },
+        { "url": "http://**" }
+      ]
     }
   ]
 }

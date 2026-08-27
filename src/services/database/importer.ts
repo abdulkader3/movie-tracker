@@ -12,6 +12,7 @@ import { attachFile } from './fileRepo';
 import { setEpisodeWatched } from './progressRepo';
 import type { MediaType } from '../../types/media';
 import type { TmdbSearchHit } from '../../types/tmdb';
+import { markDatabaseDirty } from '../../hooks/useBackup';
 
 async function tryEnrichImdbRating(mediaId: number, imdbId: string | null): Promise<void> {
   if (!imdbId) return;
@@ -104,7 +105,9 @@ export async function importTv(tmdbId: number): Promise<number> {
 export async function saveFromSearch(hit: TmdbSearchHit): Promise<number> {
   const existing = await findByProviderId(hit.id, hit.media_type);
   if (existing) return existing.id;
-  return hit.media_type === 'movie' ? importMovie(hit.id) : importTv(hit.id);
+  const id = hit.media_type === 'movie' ? await importMovie(hit.id) : await importTv(hit.id);
+  markDatabaseDirty();
+  return id;
 }
 
 export async function refreshMedia(
@@ -114,6 +117,7 @@ export async function refreshMedia(
 ): Promise<void> {
   if (mediaType === 'movie') {
     await importMovie(tmdbId);
+    markDatabaseDirty();
     return;
   }
   const snapshot = await snapshotEpisodeState(mediaId);
@@ -129,4 +133,5 @@ export async function refreshMedia(
       await attachFile({ episodeId: freshEpisodeId }, entry.path);
     }
   }
+  markDatabaseDirty();
 }

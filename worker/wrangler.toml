@@ -1,0 +1,11 @@
+name = "movie-tracker-backup-worker"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+[vars]
+BACKUP_BUCKET_NAME = "movie-tracker-backups"
+
+[[r2_buckets]]
+binding = "R2_BUCKET"
+bucket_name = "movie-tracker-backups"
+preview_bucket_name = "movie-tracker-backups"

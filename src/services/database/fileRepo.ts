@@ -1,5 +1,6 @@
 import { getDb } from './db';
 import type { LocalFileRecord } from '../../types/media';
+import { markDatabaseDirty } from '../../hooks/useBackup';
 
 export async function getFileForMedia(mediaId: number): Promise<LocalFileRecord | null> {
   const db = await getDb();
@@ -34,11 +35,13 @@ export async function attachFile(
       path,
     ]);
   }
+  markDatabaseDirty();
 }
 
 export async function removeFile(fileId: number): Promise<void> {
   const db = await getDb();
   await db.execute('DELETE FROM local_files WHERE id = ?', [fileId]);
+  markDatabaseDirty();
 }
 
 export async function removeFilesForSeason(mediaId: number, seasonNumber: number): Promise<void> {
@@ -47,4 +50,5 @@ export async function removeFilesForSeason(mediaId: number, seasonNumber: number
     'DELETE FROM local_files WHERE episode_id IN (SELECT id FROM episodes WHERE media_id = ? AND season_number = ?)',
     [mediaId, seasonNumber],
   );
+  markDatabaseDirty();
 }

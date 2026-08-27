@@ -1,16 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import { Sidebar } from './components/Sidebar';
+import { SyncIndicator } from './components/SyncIndicator';
 import { DetailPage } from './pages/DetailPage';
 import { LibraryPage } from './pages/LibraryPage';
 import { SearchPage } from './pages/SearchPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { saveFromSearch } from './services/database/importer';
 import type { MediaType } from './types/media';
 import type { TmdbSearchHit } from './types/tmdb';
 import { friendlyApiError } from './utils/errors';
+import { useBackup } from './hooks/useBackup';
 
 type ListView =
   | { name: 'library'; mediaType?: MediaType }
-  | { name: 'detail'; mediaId: number };
+  | { name: 'detail'; mediaId: number }
+  | { name: 'settings' };
 
 interface Toast {
   kind: 'info' | 'error';
@@ -70,6 +74,7 @@ export default function App() {
   const [savingTitle, setSavingTitle] = useState<string | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
   const mainRef = useSmoothScroll();
+  const backup = useBackup();
 
   const searching = submittedQuery.trim().length >= 2;
 
@@ -83,7 +88,7 @@ export default function App() {
     setQuery('');
     setSubmittedQuery('');
     setListView(view);
-    setReturnView(view);
+    if (view.name !== 'settings') setReturnView(view);
   }
 
   function handleSubmitSearch() {
@@ -120,7 +125,7 @@ export default function App() {
         collapsed={collapsed}
         query={query}
         activeKey={
-          searching || listView.name === 'detail'
+          searching || listView.name === 'detail' || listView.name === 'settings'
             ? null
             : ((listView.mediaType ?? 'all') as 'all' | 'movie' | 'tv')
         }
@@ -128,15 +133,18 @@ export default function App() {
         onQueryChange={setQuery}
         onSubmit={handleSubmitSearch}
         onNavigate={(key) =>
-          navigateToList(
-            key === 'all'
-              ? { name: 'library' }
-              : { name: 'library', mediaType: key === 'movie' ? 'movie' : 'tv' },
-          )
+          key === 'settings'
+            ? navigateToList({ name: 'settings' })
+            : navigateToList(
+                key === 'all'
+                  ? { name: 'library' }
+                  : { name: 'library', mediaType: key === 'movie' ? 'movie' : 'tv' },
+              )
         }
       />
 
       <main className="main" ref={mainRef}>
+        <SyncIndicator syncStatus={backup.syncStatus} syncError={backup.syncError} />
         {searching ? (
           <SearchPage query={submittedQuery} savingTitle={savingTitle} onSelect={handleSelectResult} />
         ) : listView.name === 'detail' ? (
@@ -146,9 +154,24 @@ export default function App() {
             onBack={() => setListView(returnView)}
             onDeleted={() => setListView(returnView)}
           />
-        ) : (
+        ) : listView.name === 'settings' ? (
+          <SettingsPage
+            lastBackup={backup.lastBackup}
+            cloudConnected={backup.cloudConnected}
+            status={backup.status}
+            error={backup.error}
+            availableBackups={backup.availableBackups}
+            progressMessage={backup.progressMessage}
+            hasPassword={backup.hasPassword}
+            onBackup={backup.runBackup}
+            onRestore={backup.runRestore}
+            onRefresh={backup.refreshBackups}
+            onSaveAutoPassword={backup.saveAutoBackupPassword}
+            onClearAutoPassword={backup.clearAutoBackupPassword}
+          />
+        ) : listView.name === 'library' ? (
           <LibraryPage mediaType={listView.mediaType} onOpen={openDetail} />
-        )}
+        ) : null}
       </main>
 
       {savingTitle && <div className="saving-bar">Saving “{savingTitle}”…</div>}

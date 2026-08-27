@@ -1,4 +1,5 @@
 import { getDb } from './db';
+import { markDatabaseDirty } from '../../hooks/useBackup';
 import type {
   Genre,
   MediaListItem,
@@ -329,4 +330,5 @@ export async function deleteMedia(id: number): Promise<void> {
   await db.execute('DELETE FROM media_genres WHERE media_id = ?', [id]);
   await db.execute('DELETE FROM genres WHERE id NOT IN (SELECT DISTINCT genre_id FROM media_genres)');
   await db.execute('DELETE FROM media WHERE id = ?', [id]);
+  markDatabaseDirty();
 }
