@@ -121,6 +121,7 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      <SyncIndicator syncStatus={backup.syncStatus} syncError={backup.syncError} />
       <Sidebar
         collapsed={collapsed}
         query={query}
@@ -144,7 +145,6 @@ export default function App() {
       />
 
       <main className="main" ref={mainRef}>
-        <SyncIndicator syncStatus={backup.syncStatus} syncError={backup.syncError} />
         {searching ? (
           <SearchPage query={submittedQuery} savingTitle={savingTitle} onSelect={handleSelectResult} />
         ) : listView.name === 'detail' ? (

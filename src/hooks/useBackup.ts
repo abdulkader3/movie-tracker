@@ -30,8 +30,14 @@ function writeLastBackup(meta: BackupMetadata) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(meta));
 }
 
+let currentAutoBackupService: AutoBackupService | null = null;
+
 export function markDatabaseDirty() {
   localStorage.setItem(DIRTY_KEY, '1');
+  // Notify the active AutoBackupService (if any) so it schedules the debounced
+  // background backup. This is the single dispatcher used by all DB write
+  // operations, which import this standalone function.
+  currentAutoBackupService?.notifyDirty();
 }
 
 export function useBackup() {
@@ -102,7 +108,11 @@ export function useBackup() {
       onError: (msg) => setSyncError(msg),
     });
     autoBackupRef.current = svc;
-    return () => svc.stop();
+    currentAutoBackupService = svc;
+    return () => {
+      svc.stop();
+      if (currentAutoBackupService === svc) currentAutoBackupService = null;
+    };
   }, [refreshBackups]);
 
   const notifyDirty = useCallback(() => {

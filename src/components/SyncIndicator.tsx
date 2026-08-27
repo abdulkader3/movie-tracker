@@ -16,15 +16,21 @@ export function SyncIndicator({ syncStatus, syncError }: SyncIndicatorProps) {
           Syncing backup…
         </>
       )}
+      {syncStatus === 'succeeded' && (
+        <>
+          <span className="sync-check">✓</span>
+          Backup synced
+        </>
+      )}
       {syncStatus === 'retrying' && (
         <>
           <span className="sync-spinner" />
-          {syncError || 'Retrying backup…'}
+          {syncError || 'Backup sync failed — retrying…'}
         </>
       )}
       {syncStatus === 'error' && (
         <span className="sync-error-text">
-          {syncError || 'Backup failed'}
+          {syncError || 'Backup sync failed'}
         </span>
       )}
     </div>
